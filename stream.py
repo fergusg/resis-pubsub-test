@@ -1,52 +1,45 @@
 import json
-import os
 import sys
 import time
 
-from utils import rand_t, redis
+from utils import rand_t, redis, config
 
 # Probably user's "bank"
-STREAM = os.getenv("STREAM", "mypubsub")
+STREAM = config.get("stream", "mypubsub")
 
 
-def producer(p: int):
-    if p == 1:
-        sleep_t = rand_t()
-        n = 20
-    else:
-        sleep_t = 1
-        n = 10
-    for i in range(n):
-        resp = redis.publish(
+def publish(delay=1):
+    n = 20
+    for _ in range(n):
+        t = time.time()
+        num_subscribers = redis.publish(
             channel=STREAM,
-            message=json.dumps({"time": time.time()}),  # any random JSON
+            message=json.dumps({"time": t}),  # any random JSON
         )
-        if p == 1:
-            sleep_t = rand_t()
-        print("producer: %s" % i, resp, sleep_t)
+        sleep_t = rand_t() * delay
+        print("Publishing to %s" % STREAM, num_subscribers, sleep_t, t)
         time.sleep(sleep_t)
 
 
-def simple_consumer():
+def subscribe():
     pubsub = redis.pubsub()
     pubsub.subscribe(STREAM)
-
-    while True:
-        print("subscribing")
-        for message in pubsub.listen():
-            if message["type"] == "message":
-                m = json.loads(message["data"])
-                now = time.time()
-                t = m["time"]
-                print(m, now - t)
-        time.sleep(1)
+    print("Subscribing to", STREAM)
+    for message in pubsub.listen():
+        if message["type"] == "message":
+            m = json.loads(message["data"])
+            now = time.time()
+            t = m["time"]
+            print(m, now - t)
 
 
 if __name__ == "__main__":
     opt = sys.argv[1]
-    if opt == "producer":
-        producer(1)
-    elif opt == "C":
-        simple_consumer()
+    if opt == "pub":
+        publish(0)
+    elif opt == "sub":
+        while True:
+            subscribe()
+            time.sleep(1)
     else:
         print("unknown option", opt)

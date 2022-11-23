@@ -1,6 +1,4 @@
 from random import random
-from typing import Tuple
-
 from dotenv import dotenv_values
 from redis import Redis
 
@@ -13,10 +11,6 @@ def btos(s: bytes) -> str:
 
 def rand_t():
     return random() * 0.1
-
-
-def dot():
-    print(".", end="", flush=True)
 
 
 redis = Redis(
